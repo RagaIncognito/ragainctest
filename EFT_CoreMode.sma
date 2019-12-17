@@ -55,10 +55,12 @@ public plugin_init()	{
 	
 	register_clcmd("say /info", "info")
 	
-	register_event("HLTV", "NewRound", "a", "1=0", "2=0");
+	register_event("HLTV", "Event_New_Round", "a", "1=0", "2=0");
 	
-	RegisterHam(Ham_TraceAttack, "player", "fwd_Ham_BlockDamage");
+	RegisterHam(Ham_TraceAttack, "player", "fwd_Ham_TraceAttack");
 	RegisterHam(Ham_Killed, "player", "fwd_Ham_Killed");
+	
+	Event_New_Round();
 }
 
 /* ---------------------------------------------------------------------------- */
@@ -79,13 +81,13 @@ public client_disconnected( pPlayer )	{
 // |-- >>> GAME EVENT <<< --|
 /* ---------------------------------------------------------------------------- */
 
-public NewRound() {
+public Event_New_Round() {
 	g_bRoundType = !g_bRoundType;
 	
 	if(!g_bRoundType)
-		server_cmd("mp_roundtime 0.55");
+		server_cmd("mp_roundtime 0.5");
 	else
-		server_cmd("mp_roundtime 8");
+		server_cmd("mp_roundtime 8.0");
 	
 	client_print(0, print_chat, "[debug] Режим: %s", g_bRoundType ? "Лобби" : "Игровой раунд");
 }
@@ -94,28 +96,34 @@ public NewRound() {
 // |-- >>> HAMSANDWICH <<< --|
 /* ---------------------------------------------------------------------------- */
 
-public fwd_Ham_BlockDamage() {
+public fwd_Ham_TraceAttack() {
 	if(!g_bRoundType)
 		return HAM_SUPERCEDE;
 	
 	return HAM_IGNORED;
 }
 
-public fwd_Ham_Killed(victim)
+public fwd_Ham_Killed( pPlayer )
 {
-	client_print(0, print_chat, "[debug] Вы были убиты");
+	client_print(pPlayer, print_chat, "[debug] Вы были убиты");
 	
-	if(g_bRoundType)
-		set_task(2.0, "Player_Respawn", victim);
+	if(!g_bRoundType)
+		set_task(2.0, "Player_Respawn", pPlayer);
 }
 
 /* ---------------------------------------------------------------------------- */
 // |-- >>> FUNCTION'S <<< --|
 /* ---------------------------------------------------------------------------- */
 
-public Player_Respawn(victim) {
-	ExecuteHam(Ham_CS_RoundRespawn, victim);
-	client_print(0, print_chat, "[debug] Вы возродились");
+public Player_Respawn( pPlayer) {
+	if(!RM_UserConnected( pPlayer ))
+		return false;
+	
+	client_print( pPlayer, print_chat, "[debug] Вы возродились");
+	
+	ExecuteHam(Ham_CS_RoundRespawn, pPlayer);
+	
+	return true;
 }
 
 public info() {
